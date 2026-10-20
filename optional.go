@@ -4,20 +4,24 @@ import "encoding/json"
 
 type Optional[T any] struct {
 	Set   bool
-	Value T
+	value *T
 }
 
 func Some[T any](value T) Optional[T] {
-	return Optional[T]{Set: true, Value: value}
+	return Optional[T]{Set: true, value: &value}
 }
 
 func (o Optional[T]) graphOptional() (any, bool) {
-	return o.Value, o.Set
+	if o.value == nil {
+		return nil, o.Set
+	}
+	return *o.value, o.Set
 }
 
 func (o Optional[T]) MarshalJSON() ([]byte, error) {
 	if !o.Set {
 		return []byte("null"), nil
 	}
-	return json.Marshal(o.Value)
+	value, _ := o.graphOptional()
+	return json.Marshal(value)
 }

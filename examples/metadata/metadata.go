@@ -15,7 +15,7 @@ type Result struct {
 func Get(ctx context.Context, client *hyperflow.Client) (Result, error) {
 	query := hyperflow.NewQuery(func(fields *hyperflow.QueryFields) {
 		fields.Metadata(func(metadata *hyperflow.MetadataFields) {
-			metadata.ChainID()
+			metadata.ChainID(hyperflow.Optional[string]{}, hyperflow.Optional[int32]{})
 		})
 	})
 	var result Result

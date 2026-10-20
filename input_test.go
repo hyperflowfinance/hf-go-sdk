@@ -26,3 +26,16 @@ func TestGeneratedInputTypesOmitUnsetFieldsAndKeepFalse(t *testing.T) {
 		t.Fatalf("got %s, want %s", data, want)
 	}
 }
+
+func TestOptionalSupportsRecursiveInputTypes(t *testing.T) {
+	type recursiveInput struct {
+		Next Optional[recursiveInput] `json:"next"`
+	}
+	data, err := marshalInput(recursiveInput{Next: Some(recursiveInput{})})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != `{"next":{}}` {
+		t.Fatalf("got %s, want recursive input object", data)
+	}
+}
