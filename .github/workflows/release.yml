@@ -46,7 +46,9 @@ jobs:
           files=(zz_generated_*.go)
           ((${#files[@]} > 0))
           git add -f -- "${files[@]}"
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Release $VERSION with generated client"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Release $VERSION with generated client"
           git tag -a "$VERSION" -m "$VERSION"
           git push origin "refs/tags/$VERSION"
       - name: Request Go proxy indexing
