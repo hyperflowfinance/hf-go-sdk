@@ -1,0 +1,55 @@
+name: Go module release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New immutable module version, for example v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: go-release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+      - name: Validate source and version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main" || { echo "Dispatch from main only"; exit 1; }
+          [[ "$VERSION" =~ ^v(0|1)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "Expected stable v0.x.y or v1.x.y"; exit 1; }
+          git show-ref --verify --quiet "refs/tags/$VERSION" && { echo "Tag already exists"; exit 1; }
+          test -z "$(git status --porcelain)"
+      - name: Generate and test
+        run: |
+          go run ./cmd/codegen
+          go test ./...
+        env:
+          HYPERFLOW_AUTH_HEADER: ${{ vars.HYPERFLOW_AUTH_HEADER }}
+          HYPERFLOW_AUTH_VALUE: ${{ secrets.HYPERFLOW_AUTH_VALUE }}
+      - name: Commit generated sources and push immutable tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          shopt -s nullglob
+          files=(zz_generated_*.go)
+          ((${#files[@]} > 0))
+          git add -f -- "${files[@]}"
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Release $VERSION with generated client"
+          git tag -a "$VERSION" -m "$VERSION"
+          git push origin "refs/tags/$VERSION"
+      - name: Request Go proxy indexing
+        env:
+          VERSION: ${{ inputs.version }}
+        run: GOPROXY=proxy.golang.org go list -m "github.com/hyperflowfinance/hf-go-sdk@$VERSION"
