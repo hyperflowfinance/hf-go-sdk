@@ -1,0 +1,3 @@
+package hyperflow
+
+type DelegateStakeChangedOrderField string
