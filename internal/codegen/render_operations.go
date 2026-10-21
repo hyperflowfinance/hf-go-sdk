@@ -34,6 +34,7 @@ func appendOperation(source *strings.Builder, function, operation string, root *
 		return fmt.Errorf("operation root %q is not an object", root.Name)
 	}
 	fields := goName(root.Name) + "Fields"
+	source.WriteString("// " + function + " creates a " + operation + " document from selected fields.\n")
 	source.WriteString("func " + function + "(selectFields func(*" + fields + ")) Document {\n")
 	source.WriteString("\troot := &selectionNode{}\n")
 	source.WriteString("\tif selectFields != nil { selectFields(&" + fields + "{node: root}) }\n")

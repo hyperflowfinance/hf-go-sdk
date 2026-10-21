@@ -12,6 +12,7 @@ func renderInlineInput(directory, name string, typeDef Type, types map[string]Ty
 	if needsJSONInput(typeDef.InputFields, types) {
 		source.WriteString("import \"encoding/json\"\n\n")
 	}
+	source.WriteString("// " + name + " contains values for GraphQL " + typeDef.Name + ".\n")
 	source.WriteString("type " + name + " struct {\n")
 	for _, field := range typeDef.InputFields {
 		fieldType, err := inputType(field.Type, types)

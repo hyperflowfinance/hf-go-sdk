@@ -15,9 +15,10 @@ query := hyperflow.NewQuery(func(q *hyperflow.QueryFields) {
         m.ChainID(hyperflow.Optional[string]{}, hyperflow.Optional[int32]{})
     })
 })
-var result struct {
+type MetadataResult struct {
     Metadata struct { ChainID string `json:"chainId"` } `json:"metadata"`
 }
+var result MetadataResult
 if err := client.Query(ctx, query, &result); err != nil {
     return err
 }
@@ -26,8 +27,9 @@ fmt.Println(result.Metadata.ChainID)
 
 See [examples/metadata-cli](examples/metadata-cli) for a query example and
 [examples/new-blocks](examples/new-blocks) for a WebSocket subscription example.
-Results are decoded into caller-provided structs, matching the selected response
-shape.
+Results are decoded into caller-defined Go structs, matching the selected response
+shape. See the runnable [`ExampleClient_Query`](example_test.go) and the
+[`MetadataResult`](example_test.go) type for a fully typed response example.
 Generated field selectors, argument types, enums and input types come from the
 live schema. Custom scalars use `json.RawMessage`; nullable inputs use `Optional[T]`.
 When available, `NewSubscription` builds a schema-typed subscription document.

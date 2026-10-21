@@ -8,7 +8,9 @@ import (
 func renderSelector(directory string, typeDef Type, types map[string]Type) error {
 	name := goName(typeDef.Name) + "Fields"
 	typeFile := "zz_generated_selector_" + fileToken(typeDef.Name) + ".go"
-	if err := writeSource(directory, typeFile, sourceHeader()+"type "+name+" struct{ node *selectionNode }\n"); err != nil {
+	typeSource := sourceHeader() + "// " + name + " builds a selection set for GraphQL " + typeDef.Name + ".\n" +
+		"type " + name + " struct{ node *selectionNode }\n"
+	if err := writeSource(directory, typeFile, typeSource); err != nil {
 		return err
 	}
 	methods := []string{scalarMethod(name, "__typename", "Typename")}
@@ -34,19 +36,29 @@ func renderSelector(directory string, typeDef Type, types map[string]Type) error
 	if err := uniqueGoNames(typeDef.Name, methodNames); err != nil {
 		return err
 	}
-	for start, part := 0, 0; start < len(methods); start, part = start+12, part+1 {
-		end := min(start+12, len(methods))
-		var source strings.Builder
-		source.WriteString(sourceHeader())
-		for _, method := range methods[start:end] {
-			source.WriteString(method + "\n")
+	var source strings.Builder
+	source.WriteString(sourceHeader())
+	part, lines := 0, 2
+	for _, method := range methods {
+		methodLines := strings.Count(method, "\n") + 1
+		if lines+methodLines >= 75 {
+			if err := writeSelectorPart(directory, typeDef.Name, part, source.String()); err != nil {
+				return err
+			}
+			part++
+			source.Reset()
+			source.WriteString(sourceHeader())
+			lines = 2
 		}
-		file := fmt.Sprintf("zz_generated_selector_%s_%d.go", fileToken(typeDef.Name), part)
-		if err := writeSource(directory, file, source.String()); err != nil {
-			return err
-		}
+		source.WriteString(method + "\n")
+		lines += methodLines
 	}
-	return nil
+	return writeSelectorPart(directory, typeDef.Name, part, source.String())
+}
+
+func writeSelectorPart(directory, typeName string, part int, source string) error {
+	file := fmt.Sprintf("zz_generated_selector_%s_%d.go", fileToken(typeName), part)
+	return writeSource(directory, file, source)
 }
 
 func uniqueGoNames(typeName string, names []string) error {

@@ -7,6 +7,8 @@ import (
 	"reflect"
 )
 
+// Next waits for the next event and decodes it into result.
+// It returns io.EOF when the server completes the subscription.
 func (s *Subscription) Next(result any) error {
 	s.readMu.Lock()
 	defer s.readMu.Unlock()

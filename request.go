@@ -10,10 +10,12 @@ import (
 	"reflect"
 )
 
+// Query executes a generated query document and decodes data into result.
 func (c *Client) Query(ctx context.Context, document Document, result any) error {
 	return c.execute(ctx, "query", document, result)
 }
 
+// Mutate executes a generated mutation document and decodes data into result.
 func (c *Client) Mutate(ctx context.Context, document Document, result any) error {
 	return c.execute(ctx, "mutation", document, result)
 }

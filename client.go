@@ -9,6 +9,7 @@ import (
 
 const defaultURL = "https://api.hyperflowlabs.com/graphql"
 
+// Config configures the GraphQL endpoint, authentication, headers, and HTTP client.
 type Config struct {
 	URL        string
 	AuthHeader string
@@ -17,12 +18,14 @@ type Config struct {
 	HTTPClient *http.Client
 }
 
+// Client sends typed GraphQL queries, mutations, and subscriptions.
 type Client struct {
 	endpoint string
 	headers  http.Header
 	http     *http.Client
 }
 
+// Connect creates a GraphQL client using the supplied configuration and environment defaults.
 func Connect(config ...Config) (*Client, error) {
 	cfg := Config{}
 	if len(config) > 1 {
