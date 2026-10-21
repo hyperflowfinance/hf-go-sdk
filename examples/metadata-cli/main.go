@@ -18,5 +18,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(result.Metadata.ChainID)
+	if result.ChainID == nil {
+		log.Fatal("metadata.chainId is null")
+	}
+	fmt.Println(*result.ChainID)
 }

@@ -48,7 +48,14 @@ func Generate(schema *Schema, directory string) error {
 			if err := renderInput(directory, typeDef, types); err != nil {
 				return err
 			}
-		case "OBJECT", "INTERFACE", "UNION":
+		case "OBJECT":
+			if err := renderObject(directory, typeDef, schema, types); err != nil {
+				return err
+			}
+			if err := renderSelector(directory, typeDef, types); err != nil {
+				return err
+			}
+		case "INTERFACE", "UNION":
 			if err := renderSelector(directory, typeDef, types); err != nil {
 				return err
 			}

@@ -18,11 +18,17 @@ func renderInlineInput(directory, name string, typeDef Type, types map[string]Ty
 		if err != nil {
 			return fmt.Errorf("input %s.%s: %w", typeDef.Name, field.Name, err)
 		}
-		source.WriteString("\t" + goName(field.Name) + " " + fieldType + " `json:" + strconv.Quote(field.Name) + "`\n")
+		source.WriteString("\t" + goName(field.Name) + " " + fieldType + " `json:" + strconv.Quote(inputTag(field)) + "`\n")
 	}
-	source.WriteString("}\n\nfunc (v " + name + ") MarshalJSON() ([]byte, error) {\n")
-	source.WriteString("\treturn marshalInput(v)\n}\n")
+	source.WriteString("}\n")
 	return writeSource(directory, "zz_generated_input_"+fileToken(typeDef.Name)+".go", source.String())
+}
+
+func inputTag(field Input) string {
+	if field.Type.Kind != "NON_NULL" {
+		return field.Name + ",omitzero"
+	}
+	return field.Name
 }
 
 func needsJSONInput(fields []Input, types map[string]Type) bool {

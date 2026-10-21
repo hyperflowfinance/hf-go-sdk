@@ -18,6 +18,8 @@ func (o Optional[T]) graphOptional() (any, bool) {
 	return *o.value, o.Set
 }
 
+func (o Optional[T]) IsZero() bool { return !o.Set }
+
 func (o Optional[T]) MarshalJSON() ([]byte, error) {
 	if !o.Set {
 		return []byte("null"), nil

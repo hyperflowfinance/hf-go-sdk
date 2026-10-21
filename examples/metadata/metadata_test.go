@@ -42,7 +42,10 @@ func TestExampleUsesTypedSelectionAndConfiguredClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Metadata.ChainID != "1" {
-		t.Fatalf("unexpected chain ID %q", result.Metadata.ChainID)
+	if result.ChainID == nil {
+		t.Fatal("chain ID is null")
+	}
+	if *result.ChainID != "1" {
+		t.Fatalf("unexpected chain ID %q", *result.ChainID)
 	}
 }

@@ -6,8 +6,9 @@ import (
 	"strings"
 )
 
-func renderField(receiver, method string, field Field, types map[string]Type) (string, error) {
-	params, args, err := renderArguments(field.Args, types)
+func renderField(ownerType, receiver, method string, field Field, types map[string]Type) (string, error) {
+	argsType := ownerType + method + "Args"
+	decl, params, args, hasOpt, err := renderArguments(argsType, field.Args, types)
 	if err != nil {
 		return "", err
 	}
@@ -23,46 +24,63 @@ func renderField(receiver, method string, field Field, types map[string]Type) (s
 	if !composite && typeDef.Kind != "SCALAR" && typeDef.Kind != "ENUM" {
 		return "", fmt.Errorf("return type %q has unsupported kind %q", target, typeDef.Kind)
 	}
-	argsText := renderArgumentList(args)
+	if composite {
+		params = append(params, "selectFields func(*"+goName(target)+"Fields)")
+	}
+	if hasOpt {
+		params = append(params, "opts ..."+argsType)
+	}
 	var source strings.Builder
+	source.WriteString(decl)
+	source.WriteString("func (s *" + receiver + ") " + method + "(" + strings.Join(params, ", ") + ") *" + receiver + " {\n")
+	if hasOpt {
+		source.WriteString("\tvar opt " + argsType + "\n\tif len(opts) > 0 { opt = opts[0] }\n")
+	}
+	argsText := renderArgumentList(args)
 	if composite {
 		childType := goName(target) + "Fields"
-		params = append(params, "selectFields func(*"+childType+")")
-		source.WriteString("func (s *" + receiver + ") " + method + "(" + strings.Join(params, ", ") + ") *" + receiver + " {\n")
 		source.WriteString("\tchild := s.node.object(" + strconv.Quote(field.Name) + argsText + ")\n")
 		source.WriteString("\tif selectFields != nil { selectFields(&" + childType + "{node: child}) }\n")
 	} else {
-		source.WriteString("func (s *" + receiver + ") " + method + "(" + strings.Join(params, ", ") + ") *" + receiver + " {\n")
 		source.WriteString("\ts.node.field(" + strconv.Quote(field.Name) + argsText + ")\n")
 	}
 	source.WriteString("\treturn s\n}\n")
 	return source.String(), nil
 }
 
-func renderArguments(inputs []Input, types map[string]Type) ([]string, []string, error) {
-	params := make([]string, 0, len(inputs))
-	args := make([]string, 0, len(inputs))
+func renderArguments(argsType string, inputs []Input, types map[string]Type) (string, []string, []string, bool, error) {
+	var params, args, optFields []string
 	used := map[string]bool{}
 	for _, input := range inputs {
-		name := "arg" + goName(input.Name)
-		if used[name] {
-			return nil, nil, fmt.Errorf("arguments collide as Go name %q", name)
+		fieldName := goName(input.Name)
+		if used[fieldName] {
+			return "", nil, nil, false, fmt.Errorf("arguments collide as Go name %q", fieldName)
 		}
-		used[name] = true
+		used[fieldName] = true
 		typeName, err := inputType(input.Type, types)
 		if err != nil {
-			return nil, nil, err
+			return "", nil, nil, false, err
 		}
 		gqlName, err := gqlType(input.Type)
 		if err != nil {
-			return nil, nil, err
+			return "", nil, nil, false, err
 		}
 		optional := input.Type.Kind != "NON_NULL"
-		params = append(params, name+" "+typeName)
+		valRef := "arg" + fieldName
+		if optional {
+			optFields = append(optFields, "\t"+fieldName+" "+typeName)
+			valRef = "opt." + fieldName
+		} else {
+			params = append(params, valRef+" "+typeName)
+		}
 		args = append(args, "argument{name: "+strconv.Quote(input.Name)+", gqlType: "+strconv.Quote(gqlName)+
-			", value: "+name+", optional: "+strconv.FormatBool(optional)+"}")
+			", value: "+valRef+", optional: "+strconv.FormatBool(optional)+"}")
 	}
-	return params, args, nil
+	var decl string
+	if len(optFields) > 0 {
+		decl = "type " + argsType + " struct {\n" + strings.Join(optFields, "\n") + "\n}\n\n"
+	}
+	return decl, params, args, len(optFields) > 0, nil
 }
 
 func renderArgumentList(args []string) string {
