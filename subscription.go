@@ -12,6 +12,7 @@ import (
 
 const graphqlTransportWS = "graphql-transport-ws"
 
+// Subscribe opens a WebSocket stream for a generated subscription document.
 func (c *Client) Subscribe(ctx context.Context, document Document) (*Subscription, error) {
 	if document.operation != "subscription" {
 		return nil, fmt.Errorf("expected subscription document")

@@ -21,6 +21,7 @@ func renderInput(directory string, typeDef Type, types map[string]Type) error {
 	groups := (len(typeDef.InputFields) + 49) / 50
 	var root strings.Builder
 	root.WriteString(sourceHeader())
+	root.WriteString("// " + name + " contains values for GraphQL " + typeDef.Name + ".\n")
 	root.WriteString("type " + name + " struct {\n")
 	for group := 0; group < groups; group++ {
 		root.WriteString(name + "Fields" + strconv.Itoa(group) + "\n")
@@ -35,6 +36,7 @@ func renderInput(directory string, typeDef Type, types map[string]Type) error {
 		end := min(start+50, len(typeDef.InputFields))
 		var source strings.Builder
 		source.WriteString(sourceHeader())
+		source.WriteString("// " + name + "Fields" + strconv.Itoa(group) + " contains part of " + name + ".\n")
 		for _, field := range typeDef.InputFields[start:end] {
 			fieldType, err := inputType(field.Type, types)
 			if err != nil {

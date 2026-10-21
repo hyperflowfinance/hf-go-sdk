@@ -22,9 +22,10 @@ func TestGenerateFromIntrospectionFixture(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkGenerated(t, output, "zz_generated_selector_query_0.go", "Metadata")
-	checkGenerated(t, output, "zz_generated_selector_metadata_0.go", "ChainID")
+	checkGenerated(t, output, "zz_generated_selector_metadata.go", "MetadataFields builds a selection set")
+	checkGenerated(t, output, "zz_generated_selector_metadata_0.go", "// ChainID selects the GraphQL chainId field.")
 	checkGenerated(t, output, "zz_generated_selector_searchresult_0.go", "OnThing", "OnUser")
-	checkGenerated(t, output, "zz_generated_operations.go", "NewQuery", "NewMutation")
+	checkGenerated(t, output, "zz_generated_operations.go", "// NewQuery creates a query document", "NewMutation")
 	for _, name := range generatedFiles(t, output) {
 		data, err := os.ReadFile(filepath.Join(output, name))
 		if err != nil {

@@ -15,6 +15,7 @@ type selectionNode struct {
 	requiresSelection bool
 }
 
+// Document is a schema-typed GraphQL query, mutation, or subscription.
 type Document struct {
 	operation string
 	root      *selectionNode

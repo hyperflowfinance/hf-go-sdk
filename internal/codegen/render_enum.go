@@ -9,7 +9,9 @@ import (
 func renderEnum(directory string, typeDef Type) error {
 	name := goName(typeDef.Name)
 	file := "zz_generated_enum_" + fileToken(typeDef.Name) + "_type.go"
-	if err := writeSource(directory, file, sourceHeader()+"type "+name+" string\n"); err != nil {
+	typeSource := sourceHeader() + "// " + name + " is a GraphQL " + typeDef.Name + " enum value.\n" +
+		"type " + name + " string\n"
+	if err := writeSource(directory, file, typeSource); err != nil {
 		return err
 	}
 	values := make([]string, 0, len(typeDef.EnumValues))
@@ -20,10 +22,11 @@ func renderEnum(directory string, typeDef Type) error {
 			return fmt.Errorf("enum %s values %q and %q map to %s", name, previous, value.Name, constant)
 		}
 		seen[constant] = value.Name
-		values = append(values, constant+" "+name+" = "+strconv.Quote(value.Name))
+		values = append(values, "// "+constant+" is the GraphQL "+typeDef.Name+" value "+strconv.Quote(value.Name)+".\n"+
+			constant+" "+name+" = "+strconv.Quote(value.Name))
 	}
-	for start, part := 0, 0; start < len(values); start, part = start+50, part+1 {
-		end := min(start+50, len(values))
+	for start, part := 0, 0; start < len(values); start, part = start+25, part+1 {
+		end := min(start+25, len(values))
 		var source strings.Builder
 		source.WriteString(sourceHeader())
 		source.WriteString("const (\n")

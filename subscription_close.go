@@ -19,6 +19,7 @@ type Subscription struct {
 	closeErr  error
 }
 
+// Close stops the stream and releases its WebSocket connection.
 func (s *Subscription) Close() error {
 	s.closeOnce.Do(func() {
 		s.mu.Lock()

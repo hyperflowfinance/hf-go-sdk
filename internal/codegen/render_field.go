@@ -25,6 +25,7 @@ func renderField(receiver, method string, field Field, types map[string]Type) (s
 	}
 	argsText := renderArgumentList(args)
 	var source strings.Builder
+	source.WriteString("// " + method + " selects the GraphQL " + field.Name + " field.\n")
 	if composite {
 		childType := goName(target) + "Fields"
 		params = append(params, "selectFields func(*"+childType+")")
@@ -73,6 +74,7 @@ func renderArgumentList(args []string) string {
 }
 
 func scalarMethod(receiver, field, method string) string {
-	return "func (s *" + receiver + ") " + method + "() *" + receiver + " {\n" +
+	return "// " + method + " selects the GraphQL " + field + " field.\n" +
+		"func (s *" + receiver + ") " + method + "() *" + receiver + " {\n" +
 		"\ts.node.field(" + strconv.Quote(field) + ")\n\treturn s\n}\n"
 }
