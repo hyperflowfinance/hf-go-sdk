@@ -14,8 +14,5 @@ func Get(ctx context.Context, client *hyperflow.Client) (hyperflow.Metadata, err
 	})
 	var result hyperflow.Query
 	err := client.Query(ctx, query, &result)
-	if result.Metadata == nil {
-		return hyperflow.Metadata{}, err
-	}
-	return *result.Metadata, err
+	return result.Metadata, err
 }

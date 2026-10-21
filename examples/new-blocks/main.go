@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -46,6 +46,7 @@ func watch(ctx context.Context, client *hyperflow.Client, output io.Writer) (err
 }
 
 func printBlocks(stream *hyperflow.Subscription, output io.Writer) error {
+	encoder := json.NewEncoder(output)
 	for {
 		var event hyperflow.SubscriptionEvent
 		if err := stream.Next(&event); errors.Is(err, io.EOF) {
@@ -53,8 +54,11 @@ func printBlocks(stream *hyperflow.Subscription, output io.Writer) error {
 		} else if err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(output, "block %s hash=%s timestamp=%s gasUsed=%s\n",
-			event.NewBlocks.Number, event.NewBlocks.Hash, event.NewBlocks.Timestamp, event.NewBlocks.GasUsed); err != nil {
+		block := event.NewBlocks
+		if err := encoder.Encode(map[string]any{
+			"number": block.Number, "hash": block.Hash,
+			"timestamp": block.Timestamp, "gasUsed": block.GasUsed,
+		}); err != nil {
 			return err
 		}
 	}

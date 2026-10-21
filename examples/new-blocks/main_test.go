@@ -40,12 +40,16 @@ func TestWatchReceivesBlockEvents(t *testing.T) {
 			serverErrors <- err
 			return
 		}
-		if err := writeExampleMessage(conn, wsMessage{
-			ID: "1", Type: "next",
-			Payload: json.RawMessage(`{"data":{"newBlocks":{"number":1,"hash":"h1","timestamp":"t1","gasUsed":"g1"}}}`),
-		}); err != nil {
-			serverErrors <- err
-			return
+		for _, payload := range []json.RawMessage{
+			json.RawMessage(`{"data":{"newBlocks":{"number":"1","hash":"h1","timestamp":"t1","gasUsed":"g1"}}}`),
+			json.RawMessage(`{"data":{"newBlocks":{"number":"2","hash":"h2","timestamp":null,"gasUsed":null}}}`),
+		} {
+			if err := writeExampleMessage(conn, wsMessage{
+				ID: "1", Type: "next", Payload: payload,
+			}); err != nil {
+				serverErrors <- err
+				return
+			}
 		}
 		if err := writeExampleMessage(conn, wsMessage{ID: "1", Type: "complete"}); err != nil {
 			serverErrors <- err
@@ -64,7 +68,9 @@ func TestWatchReceivesBlockEvents(t *testing.T) {
 	if err := watch(ctx, client, &output); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := output.String(), "block 1 hash=\"h1\" timestamp=\"t1\" gasUsed=\"g1\"\n"; got != want {
+	want := "{\"gasUsed\":\"g1\",\"hash\":\"h1\",\"number\":\"1\",\"timestamp\":\"t1\"}\n" +
+		"{\"gasUsed\":null,\"hash\":\"h2\",\"number\":\"2\",\"timestamp\":null}\n"
+	if got := output.String(); got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 	select {

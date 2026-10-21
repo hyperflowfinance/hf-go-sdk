@@ -19,19 +19,52 @@ var result hyperflow.Query
 if err := client.Query(ctx, query, &result); err != nil {
     return err
 }
-fmt.Println(result.Metadata.ChainID)
+if result.Metadata.ChainID == nil {
+    return fmt.Errorf("metadata.chainId is null")
+}
+fmt.Println(*result.Metadata.ChainID)
 ```
 
 See [examples/metadata-cli](examples/metadata-cli) for a query example and
 [examples/new-blocks](examples/new-blocks) for a WebSocket subscription example.
-Results are decoded into caller-provided structs, matching the selected response
-shape.
-Generated field selectors, argument types, enums and input types come from the
-live schema. Custom scalars use `json.RawMessage`; nullable inputs use `Optional[T]`.
+Results can be decoded into generated response structs such as `Query` and
+`SubscriptionEvent`, or caller-provided structs matching the selected response
+shape. Generated response structs contain all schema fields, but only selected
+fields are populated; unselected fields keep their Go zero values.
+Generated field selectors, argument types, enums, input types and response types
+come from the live schema. Nullable scalar and object outputs use pointers;
+lists use slices, and custom scalars use `json.RawMessage`. For example,
+`metadata.chainId` is a nullable hexadecimal string, not an integer.
 When available, `NewSubscription` builds a schema-typed subscription document.
 `Client.Subscribe(ctx, document)` returns a stream; call `Next(&event)` for each
 result until it returns `io.EOF`, then call `Close()`. Subscriptions use GraphQL's
-`graphql-transport-ws` protocol over WebSocket.
+`graphql-transport-ws` protocol over WebSocket. The new-blocks example prints one
+JSON object per event, preserving nullable fields as `null`.
+
+## Field selection and arguments
+
+Selection callbacks choose nested GraphQL fields; they do not process results
+or send requests. Required arguments are positional. Optional arguments go in
+the field's generated `Args` struct after the selection callback:
+
+```go
+query := hyperflow.NewQuery(func(q *hyperflow.QueryFields) {
+    q.Blocks(func(connection *hyperflow.BlockConnectionFields) {
+        connection.Items(func(b *hyperflow.BlockFields) {
+            b.Number()
+            b.Hash()
+        })
+    }, hyperflow.QueryBlocksArgs{
+        QueryInput: hyperflow.Some(hyperflow.BlockQueryInput{
+            Pagination: hyperflow.Some(hyperflow.PaginationInput{Limit: 5}),
+        }),
+    })
+})
+```
+
+Omit the `Args` value to use server defaults. Nullable inputs use `Optional[T]`:
+the zero value omits an input, `Some(value)` supplies it (including `false` or
+`0`), and `Optional[T]{Set: true}` supplies explicit `null`.
 
 ## Configuration
 
