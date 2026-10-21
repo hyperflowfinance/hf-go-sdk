@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"reflect"
 
 	"github.com/coder/websocket"
 )
@@ -37,7 +36,7 @@ func (c *Client) Subscribe(ctx context.Context, document Document) (*Subscriptio
 	conn.SetReadLimit(4 << 20)
 	opCtx, cancel := context.WithCancel(ctx)
 	sub := &Subscription{conn: conn, ctx: opCtx, cancel: cancel}
-	if err := sub.start(ctx, query, normalize(reflect.ValueOf(variables))); err != nil {
+	if err := sub.start(ctx, query, variables); err != nil {
 		sub.abort()
 		return nil, err
 	}

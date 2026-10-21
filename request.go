@@ -30,7 +30,7 @@ func (c *Client) execute(ctx context.Context, operation string, document Documen
 	if err != nil {
 		return err
 	}
-	body, err := json.Marshal(map[string]any{"query": query, "variables": normalize(reflect.ValueOf(variables))})
+	body, err := json.Marshal(map[string]any{"query": query, "variables": variables})
 	if err != nil {
 		return fmt.Errorf("encode GraphQL request: %w", err)
 	}

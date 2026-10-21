@@ -25,8 +25,7 @@ func renderInput(directory string, typeDef Type, types map[string]Type) error {
 	for group := 0; group < groups; group++ {
 		root.WriteString(name + "Fields" + strconv.Itoa(group) + "\n")
 	}
-	root.WriteString("}\n\nfunc (v " + name + ") MarshalJSON() ([]byte, error) {\n")
-	root.WriteString("\treturn marshalInput(v)\n}\n")
+	root.WriteString("}\n")
 	if err := writeSource(directory, "zz_generated_input_"+fileToken(typeDef.Name)+".go", root.String()); err != nil {
 		return err
 	}
@@ -51,7 +50,7 @@ func renderInput(directory string, typeDef Type, types map[string]Type) error {
 			if err != nil {
 				return fmt.Errorf("input %s.%s: %w", typeDef.Name, field.Name, err)
 			}
-			source.WriteString("\t" + goName(field.Name) + " " + fieldType + " `json:" + strconv.Quote(field.Name) + "`\n")
+			source.WriteString("\t" + goName(field.Name) + " " + fieldType + " `json:" + strconv.Quote(inputTag(field)) + "`\n")
 		}
 		source.WriteString("}\n")
 		if err := writeSource(directory, fmt.Sprintf("zz_generated_input_%s_%d.go", fileToken(typeDef.Name), group), source.String()); err != nil {

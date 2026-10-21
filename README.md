@@ -12,12 +12,10 @@ if err != nil {
 }
 query := hyperflow.NewQuery(func(q *hyperflow.QueryFields) {
     q.Metadata(func(m *hyperflow.MetadataFields) {
-        m.ChainID(hyperflow.Optional[string]{}, hyperflow.Optional[int32]{})
+        m.ChainID()
     })
 })
-var result struct {
-    Metadata struct { ChainID string `json:"chainId"` } `json:"metadata"`
-}
+var result hyperflow.Query
 if err := client.Query(ctx, query, &result); err != nil {
     return err
 }
@@ -55,6 +53,8 @@ go run ./examples/metadata-cli
 Generation introspects the live endpoint and fails explicitly on HTTP 429 or
 GraphQL errors; it does not retry. Generated `zz_generated_*.go` files and the
 downloaded schema are ignored on `main`. CI generates once before testing.
+Selector files are split by formatted line count to stay within the 99-line
+generated-file limit. A single oversized method still fails explicitly.
 
 ## Go module releases
 

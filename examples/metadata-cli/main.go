@@ -18,5 +18,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(result.Metadata.ChainID)
+	fmt.Println(result.ChainID)
 }
