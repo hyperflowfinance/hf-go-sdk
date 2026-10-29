@@ -2,11 +2,13 @@ package codegen
 
 import (
 	"fmt"
+	"go/format"
 	"strings"
 )
 
 func renderSelector(directory string, typeDef Type, types map[string]Type) error {
-	name := goName(typeDef.Name) + "Fields"
+	typeName := goName(typeDef.Name)
+	name := typeName + "Fields"
 	typeFile := "zz_generated_selector_" + fileToken(typeDef.Name) + ".go"
 	if err := writeSource(directory, typeFile, sourceHeader()+"type "+name+" struct{ node *selectionNode }\n"); err != nil {
 		return err
@@ -16,7 +18,7 @@ func renderSelector(directory string, typeDef Type, types map[string]Type) error
 	for _, field := range typeDef.Fields {
 		methodName := goName(field.Name)
 		methodNames = append(methodNames, methodName)
-		method, err := renderField(name, methodName, field, types)
+		method, err := renderField(typeName, name, methodName, field, types)
 		if err != nil {
 			return fmt.Errorf("selector %s.%s: %w", typeDef.Name, field.Name, err)
 		}
@@ -34,17 +36,30 @@ func renderSelector(directory string, typeDef Type, types map[string]Type) error
 	if err := uniqueGoNames(typeDef.Name, methodNames); err != nil {
 		return err
 	}
-	for start, part := 0, 0; start < len(methods); start, part = start+12, part+1 {
-		end := min(start+12, len(methods))
-		var source strings.Builder
-		source.WriteString(sourceHeader())
-		for _, method := range methods[start:end] {
-			source.WriteString(method + "\n")
+	for start, part := 0, 0; start < len(methods); part++ {
+		end := start
+		var source string
+		for end < len(methods) {
+			body := strings.Join(methods[start:end+1], "\n") + "\n"
+			candidate := sourceHeader()
+			if strings.Contains(body, "json.RawMessage") {
+				candidate += "import \"encoding/json\"\n\n"
+			}
+			formatted, err := format.Source([]byte(candidate + body))
+			if err != nil {
+				return fmt.Errorf("format selector %s: %w", typeDef.Name, err)
+			}
+			if strings.Count(string(formatted), "\n") >= 100 && end > start {
+				break
+			}
+			source = string(formatted)
+			end++
 		}
 		file := fmt.Sprintf("zz_generated_selector_%s_%d.go", fileToken(typeDef.Name), part)
-		if err := writeSource(directory, file, source.String()); err != nil {
+		if err := writeSource(directory, file, source); err != nil {
 			return err
 		}
+		start = end
 	}
 	return nil
 }

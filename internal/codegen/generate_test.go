@@ -21,8 +21,10 @@ func TestGenerateFromIntrospectionFixture(t *testing.T) {
 	if err := Generate(schema, output); err != nil {
 		t.Fatal(err)
 	}
-	checkGenerated(t, output, "zz_generated_selector_query_0.go", "Metadata")
+	checkGenerated(t, output, "zz_generated_selector_query_0.go", "Metadata", "QuerySearchArgs", "opts ...QuerySearchArgs")
 	checkGenerated(t, output, "zz_generated_selector_metadata_0.go", "ChainID")
+	checkGenerated(t, output, "zz_generated_object_metadata.go", "type Metadata struct", "ChainID string")
+	checkGenerated(t, output, "zz_generated_object_query.go", "type Query struct", "Metadata *Metadata")
 	checkGenerated(t, output, "zz_generated_selector_searchresult_0.go", "OnThing", "OnUser")
 	checkGenerated(t, output, "zz_generated_operations.go", "NewQuery", "NewMutation")
 	for _, name := range generatedFiles(t, output) {
@@ -50,6 +52,7 @@ func TestGenerateSubscriptionOperation(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkGenerated(t, output, "zz_generated_selector_subscription_0.go", "SubscriptionFields")
+	checkGenerated(t, output, "zz_generated_object_subscription.go", "type SubscriptionEvent struct")
 	checkGenerated(t, output, "zz_generated_operations.go", "NewQuery", "NewSubscription")
 }
 

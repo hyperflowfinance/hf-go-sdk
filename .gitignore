@@ -2,3 +2,4 @@
 /schema.json
 dist/
 zz_generated_*.go
+playground

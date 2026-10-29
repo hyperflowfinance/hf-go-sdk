@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -27,7 +26,7 @@ func main() {
 
 func watch(ctx context.Context, client *hyperflow.Client, output io.Writer) (err error) {
 	document := hyperflow.NewSubscription(func(s *hyperflow.SubscriptionFields) {
-		s.NewBlocks(hyperflow.Optional[hyperflow.BlockFilterInput]{}, func(b *hyperflow.BlockFields) {
+		s.NewBlocks(func(b *hyperflow.BlockFields) {
 			b.Number()
 			b.Hash()
 			b.Timestamp()
@@ -47,22 +46,19 @@ func watch(ctx context.Context, client *hyperflow.Client, output io.Writer) (err
 }
 
 func printBlocks(stream *hyperflow.Subscription, output io.Writer) error {
+	encoder := json.NewEncoder(output)
 	for {
-		var event struct {
-			NewBlocks struct {
-				Number    json.RawMessage `json:"number"`
-				Hash      json.RawMessage `json:"hash"`
-				Timestamp json.RawMessage `json:"timestamp"`
-				GasUsed   json.RawMessage `json:"gasUsed"`
-			} `json:"newBlocks"`
-		}
+		var event hyperflow.SubscriptionEvent
 		if err := stream.Next(&event); errors.Is(err, io.EOF) {
 			return nil
 		} else if err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(output, "block %s hash=%s timestamp=%s gasUsed=%s\n",
-			event.NewBlocks.Number, event.NewBlocks.Hash, event.NewBlocks.Timestamp, event.NewBlocks.GasUsed); err != nil {
+		block := event.NewBlocks
+		if err := encoder.Encode(map[string]any{
+			"number": block.Number, "hash": block.Hash,
+			"timestamp": block.Timestamp, "gasUsed": block.GasUsed,
+		}); err != nil {
 			return err
 		}
 	}
