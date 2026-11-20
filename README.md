@@ -78,3 +78,8 @@ No registry token is used. Do not edit or retag an existing version.
 
 Stage changes publish a deterministic prerelease tag from the verified snapshot. Use the version in the manifest SDK status with `go get github.com/hyperflowfinance/hf-go-sdk@<version>`.
 Preview tags default to stage; stable versions remain production-default.
+
+Verify the version and schema hash against the manifest, run `go test ./...`,
+then smoke-test a read-only query with `go run ./examples/metadata-cli` against
+`https://stage.api.hyperflowlabs.com/graphql`. Promote only after the stage query
+succeeds; stable tags remain production-default.
