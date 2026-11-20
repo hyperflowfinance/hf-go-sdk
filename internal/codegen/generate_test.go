@@ -56,6 +56,18 @@ func TestGenerateSubscriptionOperation(t *testing.T) {
 	checkGenerated(t, output, "zz_generated_operations.go", "NewQuery", "NewSubscription")
 }
 
+func TestWriteDefaultEndpoint(t *testing.T) {
+	output := t.TempDir()
+	endpoint := "https://stage.api.hyperflowlabs.com/graphql"
+	if err := WriteDefaultEndpoint(output, endpoint); err != nil {
+		t.Fatal(err)
+	}
+	checkGenerated(t, output, "zz_generated_endpoint.go", endpoint)
+	if err := WriteDefaultEndpoint(output, "file:///schema"); err == nil {
+		t.Fatal("expected invalid endpoint error")
+	}
+}
+
 func checkGenerated(t *testing.T, directory, file string, expected ...string) {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(directory, file))

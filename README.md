@@ -25,21 +25,10 @@ if result.Metadata.ChainID == nil {
 fmt.Println(*result.Metadata.ChainID)
 ```
 
-See [examples/metadata-cli](examples/metadata-cli) for a query example and
-[examples/new-blocks](examples/new-blocks) for a WebSocket subscription example.
-Results can be decoded into generated response structs such as `Query` and
-`SubscriptionEvent`, or caller-provided structs matching the selected response
-shape. Generated response structs contain all schema fields, but only selected
-fields are populated; unselected fields keep their Go zero values.
-Generated field selectors, argument types, enums, input types and response types
-come from the live schema. Nullable scalar and object outputs use pointers;
-lists use slices, and custom scalars use `json.RawMessage`. For example,
-`metadata.chainId` is a nullable hexadecimal string, not an integer.
-When available, `NewSubscription` builds a schema-typed subscription document.
-`Client.Subscribe(ctx, document)` returns a stream; call `Next(&event)` for each
-result until it returns `io.EOF`, then call `Close()`. Subscriptions use GraphQL's
-`graphql-transport-ws` protocol over WebSocket. The new-blocks example prints one
-JSON object per event, preserving nullable fields as `null`.
+See [examples/metadata-cli](examples/metadata-cli) for queries and
+[examples/new-blocks](examples/new-blocks) for WebSocket subscriptions. Decode into generated `Query`/`SubscriptionEvent` structs or caller-provided structs; only selected fields are populated.
+Selectors, arguments, enums, inputs and response types come from the live schema. Nullable outputs use pointers, lists use slices, and custom scalars use `json.RawMessage` (`metadata.chainId` is a nullable hexadecimal string).
+`NewSubscription` builds typed documents; `Client.Subscribe(ctx, document)` returns a stream. Call `Next(&event)` until `io.EOF`, then `Close()`. Subscriptions use `graphql-transport-ws`; the example prints JSON events with nullable fields as `null`.
 
 ## Field selection and arguments
 
@@ -68,12 +57,8 @@ the zero value omits an input, `Some(value)` supplies it (including `false` or
 
 ## Configuration
 
-`Connect` accepts a `Config`; explicit values override environment variables.
-`URL` defaults to `https://api.hyperflowlabs.com/graphql`. `AuthHeader` defaults
-to `x-api-key`; `AuthValue` defaults to `HYPERFLOW_AUTH_VALUE`. The environment
-names are `HYPERFLOW_API_URL`, `HYPERFLOW_AUTH_HEADER` and `HYPERFLOW_AUTH_VALUE`.
-Pass a pointer to an empty `AuthValue` to disable environment authentication.
-Custom `HTTPClient` and `Headers` are preserved.
+`Connect` accepts a `Config`; explicit values override environment variables. `URL` defaults to production, `AuthHeader` to `x-api-key`, and `AuthValue` to `HYPERFLOW_AUTH_VALUE`.
+Environment names are `HYPERFLOW_API_URL`, `HYPERFLOW_AUTH_HEADER` and `HYPERFLOW_AUTH_VALUE`. Pass an empty `AuthValue` pointer to disable environment auth; custom `HTTPClient` and `Headers` are preserved.
 
 ## Generate and test
 
@@ -83,16 +68,18 @@ go test ./...
 go run ./examples/metadata-cli
 ```
 
-Generation introspects the live endpoint and fails explicitly on HTTP 429 or
-GraphQL errors; it does not retry. Generated `zz_generated_*.go` files and the
-downloaded schema are ignored on `main`. CI generates once before testing.
-Selector files are split by formatted line count to stay within the 99-line
-generated-file limit. A single oversized method still fails explicitly.
+Generation introspects live and fails on HTTP 429 or GraphQL errors; release builds can use a verified stage snapshot. Generated files and downloaded schemas are ignored on `main`; CI generates once before testing.
+Selector files split at the 99-line limit; a single oversized method fails explicitly.
 
 ## Go module releases
 
-Go has no npm-style upload registry. Dispatch `.github/workflows/release.yml`
-from `main` with an approved `vX.Y.Z` version. It tests the generated client,
-creates a release-only commit containing generated sources, pushes that tag,
-and asks `proxy.golang.org` to index the module. No registry token or upload
-step is used. Do not edit or retag an existing version.
+Go has no upload registry. Dispatch `.github/workflows/release.yml` from `main` with an approved stable `vX.Y.Z`; it tests generated code, creates a release-only commit, pushes the tag, then requests indexing from `proxy.golang.org`.
+No registry token is used. Do not edit or retag an existing version.
+
+Stage changes publish a deterministic prerelease tag from the verified snapshot. Use the version in the manifest SDK status with `go get github.com/hyperflowfinance/hf-go-sdk@<version>`.
+Preview tags default to stage; stable versions remain production-default.
+
+Verify the version and schema hash against the manifest, run `go test ./...`,
+then smoke-test a read-only query with `go run ./examples/metadata-cli` against
+`https://stage.api.hyperflowlabs.com/graphql`. Promote only after the stage query
+succeeds; stable tags remain production-default.
