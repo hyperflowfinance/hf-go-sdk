@@ -7,8 +7,6 @@ import (
 	"os"
 )
 
-const defaultURL = "https://api.hyperflowlabs.com/graphql"
-
 type Config struct {
 	URL        string
 	AuthHeader string

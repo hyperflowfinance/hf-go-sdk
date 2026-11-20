@@ -38,5 +38,8 @@ func run(schemaFile, outputDir string) error {
 			return err
 		}
 	}
-	return codegen.Generate(schema, outputDir)
+	if err := codegen.Generate(schema, outputDir); err != nil {
+		return err
+	}
+	return codegen.WriteDefaultEndpoint(outputDir, os.Getenv("HYPERFLOW_DEFAULT_API_URL"))
 }
