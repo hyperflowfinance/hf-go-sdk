@@ -1,16 +1,32 @@
 name: Go module release
-
+run-name: ${{ inputs.channel == 'stage' && format('Stage SDK preview {0}', inputs.version) || format('Go module release {0}', inputs.version) }}
 on:
   workflow_dispatch:
     inputs:
+      channel:
+        description: Release stable or stage-preview module
+        required: false
+        default: stable
+        type: choice
+        options: [stable, stage]
       version:
-        description: "New immutable module version, for example v0.1.0"
+        description: Stable version or deterministic stage version
         required: true
         type: string
-
+      schema_hash:
+        required: false
+        type: string
+      captured_at:
+        required: false
+        type: string
+      schema_sdl_url:
+        required: false
+        type: string
+      schema_introspection_url:
+        required: false
+        type: string
 permissions:
   contents: write
-
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -24,33 +40,53 @@ jobs:
         with:
           go-version: "1.27.x"
       - name: Validate source and version
+        id: validate
         env:
           VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+          SCHEMA_HASH: ${{ inputs.schema_hash }}
+          SCHEMA_SDL_URL: ${{ inputs.schema_sdl_url }}
+          SCHEMA_INTROSPECTION_URL: ${{ inputs.schema_introspection_url }}
         run: |
-          test "$GITHUB_REF" = "refs/heads/main" || { echo "Dispatch from main only"; exit 1; }
-          [[ "$VERSION" =~ ^v(0|1)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "Expected stable v0.x.y or v1.x.y"; exit 1; }
-          git show-ref --verify --quiet "refs/tags/$VERSION" && { echo "Tag already exists"; exit 1; }
+          test "$GITHUB_REF" = refs/heads/main
+          if [[ "$CHANNEL" == stable ]]; then
+            [[ "$VERSION" =~ ^v(0|1)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          else
+            [[ "$VERSION" =~ ^v(0|1)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-stage\.[0-9]+\.g[0-9a-f]{64}$ ]]
+            [[ "$SCHEMA_HASH" =~ ^[0-9a-f]{64}$ ]]
+          fi
           test -z "$(git status --porcelain)"
-      - name: Generate and test
-        run: |
-          go run ./cmd/codegen
-          go test ./...
+          if [[ -n "$(git ls-remote --refs origin "refs/tags/$VERSION")" ]]; then
+            [[ "$CHANNEL" == stage ]] || { echo "Tag already exists"; exit 1; }
+            echo "existing=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Download and verify stage schema
+        if: inputs.channel == 'stage'
+        env:
+          SCHEMA_HASH: ${{ inputs.schema_hash }}
+          SCHEMA_SDL_URL: ${{ inputs.schema_sdl_url }}
+          SCHEMA_INTROSPECTION_URL: ${{ inputs.schema_introspection_url }}
+        run: bash scripts/fetch-stage-schema.sh
+      - name: Generate stable client and test
+        if: inputs.channel != 'stage'
+        run: go run ./cmd/codegen && go test ./...
         env:
           HYPERFLOW_AUTH_HEADER: ${{ vars.HYPERFLOW_AUTH_HEADER }}
           HYPERFLOW_AUTH_VALUE: ${{ secrets.HYPERFLOW_AUTH_VALUE }}
+      - name: Generate stage client and test
+        if: inputs.channel == 'stage'
+        run: go run ./cmd/codegen --schema-file stage-introspection.json && go test ./...
+        env:
+          HYPERFLOW_DEFAULT_API_URL: https://stage.api.hyperflowlabs.com/graphql
+          HYPERFLOW_EXPECTED_API_URL: https://stage.api.hyperflowlabs.com/graphql
+      - name: Remove downloaded stage schema
+        if: inputs.channel == 'stage'
+        run: rm stage-schema.graphql stage-introspection.json
       - name: Commit generated sources and push immutable tag
+        if: steps.validate.outputs.existing != 'true'
         env:
           VERSION: ${{ inputs.version }}
-        run: |
-          shopt -s nullglob
-          files=(zz_generated_*.go)
-          ((${#files[@]} > 0))
-          git add -f -- "${files[@]}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Release $VERSION with generated client"
-          git tag -a "$VERSION" -m "$VERSION"
-          git push origin "refs/tags/$VERSION"
+        run: bash scripts/push-generated-release.sh
       - name: Request Go proxy indexing
         env:
           VERSION: ${{ inputs.version }}

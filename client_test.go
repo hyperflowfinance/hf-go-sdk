@@ -5,8 +5,24 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
+
+func TestDefaultEndpoint(t *testing.T) {
+	t.Setenv("HYPERFLOW_API_URL", "")
+	expected := os.Getenv("HYPERFLOW_EXPECTED_API_URL")
+	if expected == "" {
+		expected = "https://api.hyperflowlabs.com/graphql"
+	}
+	client, err := Connect()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client.endpoint != expected {
+		t.Fatalf("default endpoint = %q, want %q", client.endpoint, expected)
+	}
+}
 
 func TestQueryBuildsTypedSelectionsAndOptionalVariables(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
